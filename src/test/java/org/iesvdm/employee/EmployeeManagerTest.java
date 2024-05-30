@@ -8,12 +8,11 @@ import static org.mockito.Mockito.*;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.mockito.Spy;
+import org.mockito.*;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class EmployeeManagerTest {
 
@@ -51,12 +50,13 @@ public class EmployeeManagerTest {
 	 * Descripcion del test:
 	 * Crea un stub when-thenReturn para employeeRepository.findAll
 	 * que devuelva una coleccion vacia.
-	 * Comprueba que al invocar employeeManagar.payEmployees
+	 * Comprueba que al invocar employeeManager.payEmployees
 	 * con el stub anterior no se paga a ningun empleado.
 	 */
 	@Test
 	public void testPayEmployeesReturnZeroWhenNoEmployeesArePresent() {
-
+		Mockito.when(employeeRepository.findAll()).thenReturn(new ArrayList<Employee>());
+		assertThat(employeeManager.payEmployees()).isEqualTo(0);
 	}
 
 	/**
@@ -72,8 +72,15 @@ public class EmployeeManagerTest {
 	@Test
 	public void testPayEmployeesReturnOneWhenOneEmployeeIsPresentAndBankServicePayPaysThatEmployee() {
 
-	}
+		Employee employee1 = new Employee("1", 1000);
+		List<Employee> employees = new ArrayList<>();
+		employees.add(employee1);
 
+		when(employeeRepository.findAll()).thenReturn(employees);
+
+		assertThat(employeeManager.payEmployees()).isEqualTo(1);
+		verify(bankService, times(1)).pay("1", 1000);
+	}
 
 	/**
 	 * Descripcion del test:
@@ -84,11 +91,20 @@ public class EmployeeManagerTest {
 	 * con las caracteristicas de pago de cada Employee que creaste en el stub
 	 * primero when-thenReturn.
 	 * Por último, verificea que no hay más interacciones con el mock de bankService
-	 * -pista verifyNoiMoreInteractions.
+	 * -pista verifyNoMoreInteractions.
 	 */
 	@Test
 	public void testPayEmployeesWhenSeveralEmployeeArePresent() {
 
+		Employee employee1 = Mockito.spy(new Employee("1",1000));
+		Employee employee2 = Mockito.spy(new Employee("2",2000));
+		List<Employee> employees = Arrays.asList(employee1, employee2);
+
+		Mockito.when(employeeRepository.findAll()).thenReturn(employees);
+
+		assertThat(employeeManager.payEmployees()).isEqualTo(2);
+	 	verify(bankService, times(2)).pay(anyString(),anyDouble());
+		verifyNoMoreInteractions(bankService);
 	}
 
 	/**
@@ -104,6 +120,22 @@ public class EmployeeManagerTest {
 	@Test
 	public void testPayEmployeesInOrderWhenSeveralEmployeeArePresent() {
 
+		Employee employee1 = Mockito.spy(new Employee("1",1000));
+		Employee employee2 = Mockito.spy(new Employee("2",2000));
+
+		List<Employee> employees = new ArrayList<Employee>();
+		employees.add(employee1);
+		employees.add(employee2);
+
+		when(employeeRepository.findAll()).thenReturn(employees);
+
+		assertThat(employeeManager.payEmployees()).isEqualTo(2);
+
+		final InOrder inOrder = inOrder(bankService);
+
+		inOrder.verify(bankService).pay("1",1000);
+		inOrder.verify(bankService).pay("2",2000);
+		verifyNoMoreInteractions(bankService);
 	}
 
 	/**
@@ -117,8 +149,28 @@ public class EmployeeManagerTest {
 	@Test
 	public void testExampleOfInOrderWithTwoMocks() {
 
-	}
+		Employee employee1 = Mockito.spy(new Employee("1",1000));
+		Employee employee2 = Mockito.spy(new Employee("2",2000));
 
+		List<Employee> employees = new ArrayList<Employee>();
+		employees.add(employee1);
+		employees.add(employee2);
+
+		when(employeeRepository.findAll()).thenReturn(employees);
+
+		assertThat(employeeManager.payEmployees()).isEqualTo(2);
+
+		final InOrder inOrderEmployeeRepository = inOrder(employeeRepository);
+
+		inOrderEmployeeRepository.verify(employeeRepository, times(1)).findAll();
+		verifyNoMoreInteractions(employeeRepository);
+
+		final InOrder inOrderBankService = inOrder(bankService);
+
+		inOrderBankService.verify(bankService).pay("1",1000);
+		inOrderBankService.verify(bankService).pay("2",2000);
+		verifyNoMoreInteractions(bankService);
+	}
 
 	/**
 	 * Descripcion del test:
@@ -135,6 +187,14 @@ public class EmployeeManagerTest {
 	 */
 	@Test
 	public void testExampleOfArgumentCaptor() {
+		List<Employee> employees = new ArrayList<Employee>();
+		employees.add(Mockito.spy(new Employee("1",1000)));
+		employees.add(Mockito.spy(new Employee("2",2000)));
+
+		when(employeeRepository.findAll()).thenReturn(employees);
+
+		employeeManager.payEmployees();
+		verify(bankService, times(2)).pay(anyString(), anyDouble());
 
 	}
 
@@ -187,7 +247,6 @@ public class EmployeeManagerTest {
 	public void testOtherEmployeesArePaidWhenBankServiceThrowsException() {
 	}
 
-
 	/**
 	 * Descripcion del test:
 	 * 	Crea un stub when-thenReturn para employeeRepository.findAll que devuelva
@@ -206,5 +265,4 @@ public class EmployeeManagerTest {
 	public void testArgumentMatcherExample() {
 
 	}
-
 }
